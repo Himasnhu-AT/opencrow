@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  name        String
+  openApiUrl  String
+  baseUrl     String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  messages    Message[]
+  analytics   AnalyticsEvent[]
+}
+
+model Message {
+  id              String   @id @default(cuid())
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id])
+  sessionId       String
+  role            String
+  content         String
+  functionsCalled Json?
+  createdAt       DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([productId])
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  eventType String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([eventType])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  sessionId String   @unique
+  productId String
+  history   Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sessionId])
+}

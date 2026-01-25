@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sample E-commerce - AI Agent Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f9fafb;
+    }
+
+    .header {
+      background: white;
+      padding: 20px 40px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      color: #667eea;
+    }
+
+    .user-info {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    .section {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      color: #1f2937;
+    }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+    }
+
+    .product-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .product-card img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      background: #f3f4f6;
+    }
+
+    .product-name {
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .product-price {
+      color: #667eea;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .btn:hover {
+      background: #5568d3;
+    }
+
+    .orders-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .order-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .order-info {
+      flex: 1;
+    }
+
+    .order-status {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .status-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .status-shipped {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .status-delivered {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .chat-hint {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    .chat-hint h3 {
+      margin-bottom: 10px;
+    }
+
+    .chat-examples {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+
+    .example-pill {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">🛍️ ShopDemo</div>
+    <div class="user-info">
+      <span>Welcome, <strong id="username">John Doe</strong></span>
+      <button class="btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container">
+    <!-- AI Agent Hint -->
+    <div class="chat-hint">
+      <h3>💬 Try the AI Assistant!</h3>
+      <p>Click the chat button in the bottom right to interact with your orders, subscription, and products using
+        natural language.</p>
+      <div class="chat-examples">
+        <span class="example-pill">"Show my recent orders"</span>
+        <span class="example-pill">"Cancel order #12345"</span>
+        <span class="example-pill">"Find wireless headphones"</span>
+        <span class="example-pill">"Cancel my subscription"</span>
+      </div>
+    </div>
+
+    <!-- Products Section -->
+    <div class="section">
+      <h2>Featured Products</h2>
+      <div class="products-grid" id="products-grid">
+        <!-- Products will be loaded here -->
+      </div>
+    </div>
+
+    <!-- Orders Section -->
+    <div class="section">
+      <h2>Your Orders</h2>
+      <div class="orders-list" id="orders-list">
+        <!-- Orders will be loaded here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Mock Data & API -->
+  <script src="demo.js"></script>
+
+  <!-- AI Agent Widget -->
+  <link rel="stylesheet" href="widget-style.css">
+  <script>
+    // Set user token for authentication
+    window.AI_AGENT_USER_TOKEN = 'demo-user-token-123';
+  </script>
+  <script src="ai-agent-widget.js" data-product-id="demo-shop" data-api-url="http://localhost:3001"
+    data-position="bottom-right"></script>
+</body>
+
+</html>

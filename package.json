@@ -1,0 +1,37 @@
+{
+  "name": "opencrow",
+  "version": "0.0.1",
+  "private": true,
+  "description": "create mock server on the go from ui or json schema",
+  "type": "module",
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "d": "tsc && node dist/deploy.js"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "prettier": "^3.6.2",
+    "turbo": "^2.6.1"
+  },
+  "homepage": "https://github.com/himasnhu-at/opencrow#readme",
+  "bugs": {
+    "url": "https://github.com/himasnhu-at/opencrow/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/himasnhu-at/opencrow.git"
+  },
+  "license": "BSD-3-Clause",
+  "author": {
+    "name": "Himanshu",
+    "email": "hyattherate2005@gmail.com",
+    "url": "https://himanshuat.com"
+  }
+}
