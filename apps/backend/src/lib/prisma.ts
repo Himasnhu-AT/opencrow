@@ -3,7 +3,16 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 
 const connectionString = process.env.DATABASE_URL!;
-const pool = new pg.Pool({ connectionString });
+
+// Parse the connection string to ensure strict typing for pg.Pool
+const url = new URL(connectionString);
+const pool = new pg.Pool({
+    user: url.username,
+    password: url.password,
+    host: url.hostname,
+    port: parseInt(url.port),
+    database: url.pathname.slice(1), // remove leading slash
+});
 const adapter = new PrismaPg(pool);
 
 const globalForPrisma = globalThis as unknown as {

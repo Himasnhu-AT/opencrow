@@ -6,7 +6,6 @@ import prisma from '../lib/prisma.js';
 
 const router = Router();
 
-// GET all products
 router.get('/products', async (req, res) => {
     try {
         const products = await prisma.product.findMany({
@@ -19,7 +18,6 @@ router.get('/products', async (req, res) => {
     }
 });
 
-// GET single product
 router.get('/products/:productId', async (req, res) => {
     try {
         const product = await prisma.product.findUnique({
@@ -35,7 +33,6 @@ router.get('/products/:productId', async (req, res) => {
     }
 });
 
-// Configuration endpoint - create/update product
 router.post('/config/:productId', async (req, res) => {
     const { productId } = req.params;
     const { name, openApiUrl, baseUrl } = req.body;
@@ -58,7 +55,6 @@ router.post('/config/:productId', async (req, res) => {
     }
 });
 
-// Chat endpoint
 router.post('/chat', async (req, res) => {
     try {
         const { message, productId, sessionId, userToken } = req.body;
