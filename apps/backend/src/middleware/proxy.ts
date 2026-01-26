@@ -13,7 +13,7 @@ export class APIProxy {
     async executeFunction(
         functionName: string,
         args: any,
-        userToken: string
+        userToken?: string
     ) {
         // Find the operation in OpenAPI spec
         const operation = this.findOperation(functionName);
@@ -55,10 +55,10 @@ export class APIProxy {
     private findOperation(functionName: string) {
         for (const [path, methods] of Object.entries(this.openApiSpec.paths)) {
             for (const [method, operation] of Object.entries(methods as any)) {
-                const opId = operation.operationId ||
+                const opId = (operation as any).operationId ||
                     `${method}_${path.replace(/\//g, '_').replace(/[{}]/g, '')}`;
                 if (opId === functionName) {
-                    return { path, method, ...operation };
+                    return { path, method, ...(operation as any) };
                 }
             }
         }

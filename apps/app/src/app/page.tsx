@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface Product {
   id: string;
@@ -18,24 +19,54 @@ export default function Home() {
     openApiUrl: '',
     baseUrl: ''
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+    setIsLoading(false);
+    fetchProducts();
+  }, [router]);
 
   const fetchProducts = async () => {
-    const products = await fetch('http://localhost:3001/api/products');
+    const token = localStorage.getItem('token');
+    const products = await fetch('http://localhost:3001/api/products', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    if (products.status === 401) {
+      localStorage.removeItem('token');
+      router.push('/login');
+      return;
+    }
     const data = await products.json();
     setProducts(data);
   }
 
-  useEffect(() => {
-    fetchProducts()
-  }, [])
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   const createProduct = async () => {
     const productId = `prod_${Date.now()}`;
+    const token = localStorage.getItem('token');
 
     try {
       await fetch('http://localhost:3001/api/config/' + productId, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(formData)
       });
 
@@ -54,10 +85,10 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen text-black bg-gray-50">
       <div className="max-w-6xl mx-auto p-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Products</h1>
+          <h1 className="text-3xl text-black font-bold">OpenCrow</h1>
           <button
             onClick={() => setShowModal(true)}
             className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700"
