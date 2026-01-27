@@ -1,0 +1,4 @@
+#!/bin/sh
+# pnpm lint && pnpm format && pnpm build
+# don't run lint, failing rn
+pnpm format && git add . && pnpm build

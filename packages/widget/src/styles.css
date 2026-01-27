@@ -138,9 +138,13 @@
 }
 
 @keyframes typing {
-  0%, 60%, 100% {
+
+  0%,
+  60%,
+  100% {
     transform: translateY(0);
   }
+
   30% {
     transform: translateY(-10px);
   }
@@ -179,4 +183,125 @@
 .ai-chat-input button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Markdown Styles */
+.ai-markdown p {
+  margin: 0.5em 0;
+}
+
+.ai-markdown p:first-child {
+  margin-top: 0;
+}
+
+.ai-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.ai-markdown ul,
+.ai-markdown ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.ai-markdown li {
+  margin-bottom: 0.25em;
+}
+
+.ai-markdown code {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.ai-markdown pre {
+  background: #2d3748;
+  color: #fff;
+  padding: 10px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+
+.ai-markdown pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.ai-markdown h1,
+.ai-markdown h2,
+.ai-markdown h3 {
+  margin: 1em 0 0.5em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.ai-markdown h3 {
+  font-size: 1.1em;
+}
+
+/* Tool Debug Styles */
+.ai-tool-simple {
+  font-family: monospace;
+  font-size: 0.85em;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+.ai-tool-details {
+  margin-top: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 12px;
+  background: white;
+}
+
+.ai-tool-details summary {
+  padding: 6px 10px;
+  background: #f7fafc;
+  cursor: pointer;
+  font-family: monospace;
+  font-weight: 500;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ai-tool-details summary:hover {
+  background: #edf2f7;
+}
+
+.ai-tool-content {
+  padding: 10px;
+  background: #fff;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.ai-tool-label {
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: #4a5568;
+  text-transform: uppercase;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+}
+
+.ai-tool-content pre {
+  margin: 0 0 10px 0;
+  background: #2d3748;
+  color: #e2e8f0;
+  padding: 8px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.ai-tool-content pre:last-child {
+  margin-bottom: 0;
 }

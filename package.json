@@ -5,6 +5,7 @@
   "description": "create mock server on the go from ui or json schema",
   "type": "module",
   "scripts": {
+    "prepare": "husky install",
     "build": "turbo run build",
     "test": "turbo run test",
     "dev": "turbo run dev",
@@ -20,6 +21,11 @@
   "dependencies": {
     "prettier": "^3.6.2",
     "turbo": "^2.6.1"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "husky": "^9.1.7"
   },
   "homepage": "https://github.com/himasnhu-at/opencrow#readme",
   "bugs": {

@@ -7,15 +7,19 @@ datasource db {
 }
 
 model Product {
-  id          String    @id @default(cuid())
-  name        String
-  openApiUrl  String
-  baseUrl     String
-  apiKey      String?   @unique
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  messages    Message[]
-  analytics   AnalyticsEvent[]
+  id               String            @id @default(cuid())
+  name             String
+  openApiUrl       String
+  baseUrl          String
+  apiKey           String?           @unique
+  authType         String?           // "none", "bearer", "api-key", "cookie"
+  authKeyName      String?           // e.g., "Authorization", "X-API-Key"
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  messages         Message[]
+  analytics        AnalyticsEvent[]
+  knowledgeSources KnowledgeSource[]
+  endpointConfigs  EndpointConfig[]
 }
 
 model Message {
@@ -26,10 +30,23 @@ model Message {
   role            String
   content         String
   functionsCalled Json?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime   @default(now())
+  toolCalls       ToolCall[]
 
   @@index([sessionId])
   @@index([productId])
+}
+
+model ToolCall {
+  id        String   @id @default(cuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  name      String
+  args      Json
+  result    Json?
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
 }
 
 model AnalyticsEvent {
@@ -53,4 +70,36 @@ model Session {
   updatedAt DateTime @updatedAt
 
   @@index([sessionId])
+}
+
+// Knowledge base sources (URLs and files)
+model KnowledgeSource {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type      String   // "url" or "file"
+  name      String   // URL or filename
+  content   String?  // Scraped/parsed content (text)
+  status    String   @default("pending") // "pending", "processing", "ready", "error"
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+}
+
+// Per-endpoint configuration (enable/disable)
+model EndpointConfig {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  operationId String   // From OpenAPI spec
+  method      String   // GET, POST, etc.
+  path        String   // /users/{id}
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([productId, operationId])
+  @@index([productId])
 }

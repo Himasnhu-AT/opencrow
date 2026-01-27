@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { API_BASE_URL, apiFetch } from "@/lib/api";
 
 interface Product {
   id: string;
@@ -15,17 +16,17 @@ export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    openApiUrl: '',
-    baseUrl: ''
+    name: "",
+    openApiUrl: "",
+    baseUrl: "",
   });
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (!token) {
-      router.push('/login');
+      router.push("/login");
       return;
     }
     setIsLoading(false);
@@ -33,20 +34,14 @@ export default function Home() {
   }, [router]);
 
   const fetchProducts = async () => {
-    const token = localStorage.getItem('token');
-    const products = await fetch('http://localhost:3001/api/products', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    if (products.status === 401) {
-      localStorage.removeItem('token');
-      router.push('/login');
-      return;
+    try {
+      const data = await apiFetch<Product[]>("/api/products");
+      setProducts(data);
+    } catch (error) {
+      // apiFetch handles 401 redirect
+      console.error("Failed to fetch products", error);
     }
-    const data = await products.json();
-    setProducts(data);
-  }
+  };
 
   if (isLoading) {
     return (
@@ -58,26 +53,24 @@ export default function Home() {
 
   const createProduct = async () => {
     const productId = `prod_${Date.now()}`;
-    const token = localStorage.getItem('token');
 
     try {
-      await fetch('http://localhost:3001/api/config/' + productId, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
+      await apiFetch(`/api/config/${productId}`, {
+        method: "POST",
+        body: JSON.stringify(formData),
       });
 
-      setProducts([...products, {
-        id: productId,
-        ...formData,
-        createdAt: new Date().toISOString()
-      }]);
+      setProducts([
+        ...products,
+        {
+          id: productId,
+          ...formData,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
 
       setShowModal(false);
-      setFormData({ name: '', openApiUrl: '', baseUrl: '' });
+      setFormData({ name: "", openApiUrl: "", baseUrl: "" });
     } catch (e) {
       console.error("Failed to create product", e);
       alert("Failed to create product. Is backend running?");
@@ -104,7 +97,7 @@ export default function Home() {
               No products yet. Create one to get started!
             </div>
           )}
-          {products.map(product => (
+          {products.map((product) => (
             <div key={product.id} className="bg-white p-6 rounded-lg shadow">
               <h3 className="text-xl font-semibold mb-2">{product.name}</h3>
               <p className="text-sm text-gray-600 mb-4">ID: {product.id}</p>
@@ -112,11 +105,18 @@ export default function Home() {
               <div className="space-y-2 text-sm">
                 <div>
                   <span className="font-medium">API Spec:</span>
-                  <p className="text-gray-600 truncate" title={product.openApiUrl}>{product.openApiUrl}</p>
+                  <p
+                    className="text-gray-600 truncate"
+                    title={product.openApiUrl}
+                  >
+                    {product.openApiUrl}
+                  </p>
                 </div>
                 <div>
                   <span className="font-medium">Base URL:</span>
-                  <p className="text-gray-600 truncate" title={product.baseUrl}>{product.baseUrl}</p>
+                  <p className="text-gray-600 truncate" title={product.baseUrl}>
+                    {product.baseUrl}
+                  </p>
                 </div>
               </div>
 
@@ -124,9 +124,9 @@ export default function Home() {
                 <h4 className="font-medium mb-2">Embed Code:</h4>
                 <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
                   {`<script
-  src="http://localhost:5173/ai-agent-widget.umd.js"
+  src="${API_BASE_URL.replace(":3001", ":5173")}/ai-agent-widget.umd.js"
   data-product-id="${product.id}"
-  data-api-url="http://localhost:3001"
+  data-api-url="${API_BASE_URL}"
 ></script>`}
                 </pre>
               </div>
@@ -142,12 +142,19 @@ export default function Home() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1" htmlFor="product-name">Product Name</label>
+                  <label
+                    className="block text-sm font-medium mb-1"
+                    htmlFor="product-name"
+                  >
+                    Product Name
+                  </label>
                   <input
                     id="product-name"
                     type="text"
                     value={formData.name}
-                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="My E-commerce Store"
                     autoComplete="off"
@@ -155,12 +162,19 @@ export default function Home() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1" htmlFor="openapi-url">OpenAPI Spec URL</label>
+                  <label
+                    className="block text-sm font-medium mb-1"
+                    htmlFor="openapi-url"
+                  >
+                    OpenAPI Spec URL
+                  </label>
                   <input
                     id="openapi-url"
                     type="url"
                     value={formData.openApiUrl}
-                    onChange={e => setFormData({ ...formData, openApiUrl: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, openApiUrl: e.target.value })
+                    }
                     className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="http://localhost:8000/openapi.yaml"
                     autoComplete="off"
@@ -168,12 +182,19 @@ export default function Home() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1" htmlFor="base-url">API Base URL</label>
+                  <label
+                    className="block text-sm font-medium mb-1"
+                    htmlFor="base-url"
+                  >
+                    API Base URL
+                  </label>
                   <input
                     id="base-url"
                     type="url"
                     value={formData.baseUrl}
-                    onChange={e => setFormData({ ...formData, baseUrl: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, baseUrl: e.target.value })
+                    }
                     className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="http://localhost:3002"
                     autoComplete="off"
