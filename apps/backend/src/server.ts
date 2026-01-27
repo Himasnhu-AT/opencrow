@@ -29,12 +29,12 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
 });
 
-// Chat routes (allow both JWT and API key)
-app.use('/api/chat', chatAuthMiddleware);
-app.use('/api/messages', chatAuthMiddleware);
+// // Chat routes (allow both JWT and API key)
+// app.use('/api/chat', chatAuthMiddleware);
+// app.use('/api/messages', chatAuthMiddleware);
 
 // Other protected routes (JWT only)
-app.use('/api', authMiddleware, chatRoutes);
+app.use('/api', chatRoutes);
 
 app.listen(PORT, () => {
     logger.debug(`🚀 Backend running on http://localhost:${PORT}`)

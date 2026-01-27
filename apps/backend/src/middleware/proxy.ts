@@ -15,15 +15,20 @@ export class APIProxy {
         args: any,
         userToken?: string
     ) {
+        console.log(`[APIProxy] Executing function: ${functionName} with args:`, JSON.stringify(args));
+
         // Find the operation in OpenAPI spec
         const operation = this.findOperation(functionName);
         if (!operation) {
+            console.error(`[APIProxy] Function ${functionName} not found in spec`);
             throw new Error(`Function ${functionName} not found in API spec`);
         }
 
         // Build request
         const { method, path, pathParams, queryParams, body } =
-            this.buildRequest(operation, args);
+            this.buildRequest(operation, args || {});
+
+        console.log(`[APIProxy] Request: ${method} ${this.baseUrl}${path}`, { queryParams, body });
 
         // Execute with user's auth
         try {
@@ -31,19 +36,21 @@ export class APIProxy {
                 method,
                 url: `${this.baseUrl}${path}`,
                 params: queryParams,
-                data: body,
+                data: body || undefined,  // Don't send null, send undefined to omit body
                 headers: {
-                    'Authorization': `Bearer ${userToken}`,
+                    'Authorization': userToken ? `Bearer ${userToken}` : undefined,
                     'Content-Type': 'application/json'
                 }
             });
 
+            console.log(`[APIProxy] Response: ${response.status}`, response.data);
             return {
                 success: true,
                 data: response.data,
                 status: response.status
             };
         } catch (error: any) {
+            console.error(`[APIProxy] Error: ${error.message}`, error.response?.data);
             return {
                 success: false,
                 error: error.response?.data || error.message,

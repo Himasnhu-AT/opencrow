@@ -6,6 +6,7 @@ interface WidgetProps {
     productId: string;
     apiUrl: string;
     userToken?: string;
+    apiKey?: string;
     position?: 'bottom-right' | 'bottom-left';
 }
 
@@ -13,6 +14,7 @@ export default function Widget({
     productId,
     apiUrl,
     userToken,
+    apiKey,
     position = 'bottom-right'
 }: WidgetProps) {
     const [isOpen, setIsOpen] = useState(false);
@@ -46,6 +48,7 @@ export default function Widget({
                         apiUrl={apiUrl}
                         sessionId={sessionId}
                         userToken={userToken}
+                        apiKey={apiKey}
                         onClose={() => setIsOpen(false)}
                     />
                 </div>

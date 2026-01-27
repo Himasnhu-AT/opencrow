@@ -11,6 +11,7 @@ interface ChatInterfaceProps {
     apiUrl: string;
     sessionId: string;
     userToken?: string;
+    apiKey?: string;
     onClose: () => void;
 }
 
@@ -19,6 +20,7 @@ export default function ChatInterface({
     apiUrl,
     sessionId,
     userToken,
+    apiKey,
     onClose
 }: ChatInterfaceProps) {
     const [messages, setMessages] = useState<Message[]>([
@@ -46,9 +48,17 @@ export default function ChatInterface({
         setLoading(true);
 
         try {
+            // Build headers - prefer apiKey for external widget, userToken for admin
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (apiKey) {
+                headers['X-API-Key'] = apiKey;
+            } else if (userToken) {
+                headers['Authorization'] = `Bearer ${userToken}`;
+            }
+
             const response = await fetch(`${apiUrl}/api/chat`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({
                     message: userMessage,
                     productId,

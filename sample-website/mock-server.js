@@ -25,27 +25,30 @@ const products = [
     { id: 'p3', name: 'Laptop Stand', price: 49.99, category: 'Accessories' }
 ];
 
-// Middleware to verify token
+// Middleware to verify token (optional for demo)
 const authMiddleware = (req, res, next) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token || token !== 'demo-user-token-123') {
-        return res.status(401).json({ error: 'Unauthorized' });
+    // Allow requests with any Bearer token or no token for demo purposes
+    // In production, you would validate properly
+    if (token && token !== 'demo-user-token-123' && token !== 'undefined') {
+        console.log(`[Mock API] Auth with token: ${token.substring(0, 20)}...`);
     }
     next();
 };
 
-// Routes
-app.get('/api/orders', authMiddleware, (req, res) => {
+// Routes (no auth for demo)
+app.get('/api/orders', (req, res) => {
+    console.log('[Mock API] GET /api/orders');
     res.json(orders);
 });
 
-app.get('/api/orders/:orderId', authMiddleware, (req, res) => {
+app.get('/api/orders/:orderId', (req, res) => {
     const order = orders.find(o => o.id === req.params.orderId);
     if (!order) return res.status(404).json({ error: 'Order not found' });
     res.json(order);
 });
 
-app.delete('/api/orders/:orderId', authMiddleware, (req, res) => {
+app.delete('/api/orders/:orderId', (req, res) => {
     const orderIndex = orders.findIndex(o => o.id === req.params.orderId);
     if (orderIndex === -1) return res.status(404).json({ error: 'Order not found' });
 
@@ -53,16 +56,16 @@ app.delete('/api/orders/:orderId', authMiddleware, (req, res) => {
     res.json({ message: 'Order cancelled successfully', order: orders[orderIndex] });
 });
 
-app.get('/api/subscription', authMiddleware, (req, res) => {
+app.get('/api/subscription', (req, res) => {
     res.json(subscription);
 });
 
-app.delete('/api/subscription', authMiddleware, (req, res) => {
+app.delete('/api/subscription', (req, res) => {
     subscription.status = 'cancelled';
     res.json({ message: 'Subscription cancelled successfully' });
 });
 
-app.get('/api/products', authMiddleware, (req, res) => {
+app.get('/api/products', (req, res) => {
     let filtered = products;
     if (req.query.query) {
         filtered = filtered.filter(p =>
@@ -75,11 +78,11 @@ app.get('/api/products', authMiddleware, (req, res) => {
     res.json(filtered);
 });
 
-app.get('/api/cart', authMiddleware, (req, res) => {
+app.get('/api/cart', (req, res) => {
     res.json({ items: [], total: 0 });
 });
 
-app.post('/api/cart', authMiddleware, (req, res) => {
+app.post('/api/cart', (req, res) => {
     res.json({ message: 'Item added to cart' });
 });
 

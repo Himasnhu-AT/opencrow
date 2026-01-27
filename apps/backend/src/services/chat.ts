@@ -1,7 +1,10 @@
 import prisma from '../lib/prisma.js';
-import { GeminiService } from './gemini.js';
+import { getLLMService } from './llm.js';
 import { OpenAPIParser } from '../utils/openapi-parser.js';
 import { APIProxy } from '../middleware/proxy.js';
+import { Logger } from '../utils/logger.js';
+
+const logger = new Logger();
 
 export class ChatService {
     public async processChat(
@@ -10,17 +13,21 @@ export class ChatService {
         sessionId: string,
         userToken?: string
     ) {
+        logger.info(`Processing chat for product: ${productId}, session: ${sessionId}`);
+
         // Get product configuration from database
         const product = await prisma.product.findUnique({
             where: { id: productId }
         });
 
         if (!product) {
+            logger.warn(`Product not found: ${productId}`);
             throw new Error('Product not found');
         }
 
-        // Initialize Gemini
-        const gemini = new GeminiService(process.env.GEMINI_API_KEY!);
+        // Initialize LLM (Gemini or Ollama based on env)
+        const llm = getLLMService();
+        logger.debug(`LLM service initialized`);
 
         // Get or create session from database
         let session = await prisma.session.findUnique({
@@ -53,15 +60,18 @@ export class ChatService {
             }
         });
 
-        // Send message to Gemini
-        const result = await gemini.chat(message, [{ functionDeclarations: tools }], history);
+        // Send message to LLM
+        logger.debug(`Sending message to LLM with ${tools.length} tools`);
+        const result = await llm.chat(message, [{ functionDeclarations: tools }], history);
 
         let responseText: string;
         let functionsCalled: string[] = [];
 
         if (result.type === 'function_call') {
             // Execute function calls via proxy
-            const proxy = new APIProxy(product.baseUrl, spec);
+            // Use server URL from OpenAPI spec (includes /api path) or fall back to product.baseUrl
+            const apiBaseUrl = spec.servers?.[0]?.url || product.baseUrl;
+            const proxy = new APIProxy(apiBaseUrl, spec);
             const functionResults = [];
 
             for (const call of result.functionCalls!) {
@@ -91,7 +101,8 @@ export class ChatService {
             });
 
             // Continue chat with function results
-            const finalResult = await gemini.continueWithFunctionResult(
+            logger.debug(`Continuing chat with ${functionResults.length} function results`);
+            const finalResult = await llm.continueWithFunctionResult(
                 result.chat,
                 functionResults
             );
@@ -107,7 +118,7 @@ export class ChatService {
             });
         } else {
             // Text response
-            responseText = result.text;
+            responseText = result.text || '';
             const newHistory = await result.chat.getHistory();
             await prisma.session.upsert({
                 where: { sessionId },

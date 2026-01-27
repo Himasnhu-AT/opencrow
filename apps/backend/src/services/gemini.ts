@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, FunctionDeclaration, Tool, Part } from '@google/generative-ai';
+import { LLMService } from './llm.js';
 
-export class GeminiService {
+export class GeminiService implements LLMService {
     private genAI: GoogleGenerativeAI;
     private model: any;
 
@@ -33,14 +34,14 @@ export class GeminiService {
         if (functionCalls && functionCalls.length > 0) {
             // Return function calls to be executed
             return {
-                type: 'function_call',
+                type: 'function_call' as const,
                 functionCalls,
                 chat
             };
         }
 
         return {
-            type: 'text',
+            type: 'text' as const,
             text: response.text(),
             chat
         };
@@ -54,7 +55,7 @@ export class GeminiService {
         // The structure expected by Gemini for function responses involves 'functionResponse' part
         const result = await chat.sendMessage(functionResults);
         return {
-            type: 'text',
+            type: 'text' as const,
             text: result.response.text()
         };
     }
