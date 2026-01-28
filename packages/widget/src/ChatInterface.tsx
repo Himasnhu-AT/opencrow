@@ -20,6 +20,7 @@ interface ChatInterfaceProps {
   userToken?: string;
   apiKey?: string;
   onClose: () => void;
+  tools?: Record<string, (args: any) => Promise<any> | any>;
 }
 
 export default function ChatInterface({
@@ -29,6 +30,7 @@ export default function ChatInterface({
   userToken,
   apiKey,
   onClose,
+  tools,
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "Hi! How can I help you today?" },
@@ -78,11 +80,33 @@ export default function ChatInterface({
 
       const data = await response.json();
 
+      // Check for client-side tool calls
+      if (data.functionsCalled && data.functionsCalled.length > 0) {
+        // Execute client-side tools if available
+        if (tools) {
+          for (const fn of data.functionsCalled) {
+            const toolName = typeof fn === "string" ? fn : fn.name;
+            const toolArgs = typeof fn === "string" ? {} : fn.args;
+
+            if (tools[toolName]) {
+              console.log(`Executing client-side tool: ${toolName}`, toolArgs);
+              try {
+                const result = await tools[toolName](toolArgs);
+                console.log(`Tool result:`, result);
+                // TODO: Send result back to backend if needed
+              } catch (e) {
+                console.error(`Error executing tool ${toolName}:`, e);
+              }
+            }
+          }
+        }
+      }
+
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant", // Backend returns 'assistant' role for bot responses
-          content: data.response,
+          content: data.response || "I've processed your request.", // Fallback if empty response due to tool call
           functionsCalled: data.functionsCalled,
         },
       ]);
@@ -90,7 +114,7 @@ export default function ChatInterface({
       setMessages((prev) => [
         ...prev,
         {
-          role: "assistant",
+          role: "assistant", // Backend returns 'assistant' role for bot responses
           content: "Sorry, something went wrong. Please try again.",
         },
       ]);

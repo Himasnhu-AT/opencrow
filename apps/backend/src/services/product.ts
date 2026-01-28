@@ -56,6 +56,7 @@ export class ProductService {
       baseUrl?: string;
       authType?: string | null;
       authKeyName?: string | null;
+      clientSideTools?: any;
     },
   ) {
     return prisma.product.update({

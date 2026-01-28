@@ -41,7 +41,18 @@ export class ChatService {
     // Generate tools from OpenAPI spec
     const parser = new OpenAPIParser();
     const spec = await parser.parseSpec(product.openApiUrl);
-    const tools = parser.generateTools(spec);
+    const serverTools = parser.generateTools(spec);
+
+    // Merge with client-side tools
+    const clientTools = (product.clientSideTools as any[]) || [];
+    // Convert client tools to Gemini format
+    const formattedClientTools = clientTools.map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parameters,
+    }));
+
+    const tools = [...serverTools, ...formattedClientTools];
 
     // Save user message
     await prisma.message.create({
@@ -79,8 +90,26 @@ export class ChatService {
       const apiBaseUrl = spec.servers?.[0]?.url || product.baseUrl;
       const proxy = new APIProxy(apiBaseUrl, spec);
       const functionResults = [];
+      const clientToolNames = new Set(clientTools.map((t) => t.name));
 
       for (const call of result.functionCalls!) {
+        // Check if this is a client-side tool
+        if (clientToolNames.has(call.name)) {
+          // For client-side tools, we just pass the call info back to the client
+          // The widget will execute it and (optionally) send results back
+          logger.info(`Client-side tool called: ${call.name}`);
+
+          functionsCalled.push({
+            name: call.name,
+            args: call.args,
+            response: {}, // No response yet, client will execute
+          });
+
+          // We don't add to functionResults here because we can't continue the chat immediately
+          // The client needs to intervene
+          continue;
+        }
+
         const execResult = await proxy.executeFunction(
           call.name,
           call.args,
@@ -113,16 +142,47 @@ export class ChatService {
         },
       });
 
-      // Continue chat with function results
-      logger.debug(
-        `Continuing chat with ${functionResults.length} function results`,
-      );
-      const finalResult = await llm.continueWithFunctionResult(
-        result.chat,
-        functionResults,
-      );
+      // If we only have client-side tools, we return early so the widget can execute them
+      if (functionsCalled.every((f) => clientToolNames.has(f.name))) {
+        // Save assistant message with tool calls
+        await prisma.message.create({
+          data: {
+            productId,
+            sessionId,
+            role: "assistant",
+            content: "", // Empty content as it's a pure tool call
+            functionsCalled: functionsCalled as any,
+            toolCalls: {
+              create: functionsCalled.map((f) => ({
+                name: f.name,
+                args: f.args || {},
+                result: {}, // Empty object instead of null for Prisma Json
+              })),
+            },
+          },
+        });
 
-      responseText = finalResult.text;
+        return {
+          response: "", // No text response
+          functionsCalled,
+        };
+      }
+
+      // Continue chat with function results (only for server-side tools)
+      if (functionResults.length > 0) {
+        logger.debug(
+          `Continuing chat with ${functionResults.length} function results`,
+        );
+        const finalResult = await llm.continueWithFunctionResult(
+          result.chat,
+          functionResults,
+        );
+
+        responseText = finalResult.text;
+      } else {
+        // Should not happen if logic is correct, but fallback
+        responseText = "Waiting for client action...";
+      }
 
       // Update session history
       const newHistory = await result.chat.getHistory();

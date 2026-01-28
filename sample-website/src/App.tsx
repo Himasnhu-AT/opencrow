@@ -43,6 +43,15 @@ function App() {
         productId="prod_1769552599897"
         apiUrl="http://localhost:3001"
         agentName="Shopping Assistant"
+        tools={{
+          navigate_to_page: ({ page }: { page: string }) => {
+            console.log("Navigating to:", page);
+            // Simple alert for demo, in real app use router
+            alert(`Agent requested navigation to: ${page}`);
+            window.location.hash = page;
+            return { success: true };
+          },
+        }}
       />
     </>
   );

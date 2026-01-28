@@ -12,6 +12,7 @@ model Product {
   openApiUrl       String
   baseUrl          String
   apiKey           String?           @unique
+  clientSideTools  Json?             // List of client-side tool definitions
   authType         String?           // "none", "bearer", "api-key", "cookie"
   authKeyName      String?           // e.g., "Authorization", "X-API-Key"
   createdAt        DateTime          @default(now())

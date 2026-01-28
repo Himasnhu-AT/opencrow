@@ -46,7 +46,14 @@ export class ProductController {
 
   public async updateProduct(req: Request, res: Response) {
     const { productId } = req.params;
-    const { name, openApiUrl, baseUrl, authType, authKeyName } = req.body;
+    const {
+      name,
+      openApiUrl,
+      baseUrl,
+      authType,
+      authKeyName,
+      clientSideTools,
+    } = req.body;
 
     try {
       const product = await productService.updateProduct(productId, {
@@ -55,6 +62,7 @@ export class ProductController {
         baseUrl,
         authType,
         authKeyName,
+        clientSideTools,
       });
       res.json({ success: true, product });
     } catch (error: any) {
