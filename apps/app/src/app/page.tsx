@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL, apiFetch } from "@/lib/api";
+import Link from "next/link";
 
 interface Product {
   id: string;
@@ -98,39 +99,44 @@ export default function Home() {
             </div>
           )}
           {products.map((product) => (
-            <div key={product.id} className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-xl font-semibold mb-2">{product.name}</h3>
-              <p className="text-sm text-gray-600 mb-4">ID: {product.id}</p>
+            <Link href={`/product/${product.id}`} key={product.id}>
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-xl font-semibold mb-2">{product.name}</h3>
+                <p className="text-sm text-gray-600 mb-4">ID: {product.id}</p>
 
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="font-medium">API Spec:</span>
-                  <p
-                    className="text-gray-600 truncate"
-                    title={product.openApiUrl}
-                  >
-                    {product.openApiUrl}
-                  </p>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="font-medium">API Spec:</span>
+                    <p
+                      className="text-gray-600 truncate"
+                      title={product.openApiUrl}
+                    >
+                      {product.openApiUrl}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Base URL:</span>
+                    <p
+                      className="text-gray-600 truncate"
+                      title={product.baseUrl}
+                    >
+                      {product.baseUrl}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-medium">Base URL:</span>
-                  <p className="text-gray-600 truncate" title={product.baseUrl}>
-                    {product.baseUrl}
-                  </p>
-                </div>
-              </div>
 
-              <div className="mt-4 pt-4 border-t">
-                <h4 className="font-medium mb-2">Embed Code:</h4>
-                <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
-                  {`<script
+                <div className="mt-4 pt-4 border-t">
+                  <h4 className="font-medium mb-2">Embed Code:</h4>
+                  <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
+                    {`<script
   src="${API_BASE_URL.replace(":3001", ":5173")}/ai-agent-widget.umd.js"
   data-product-id="${product.id}"
   data-api-url="${API_BASE_URL}"
 ></script>`}
-                </pre>
+                  </pre>
+                </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
 
