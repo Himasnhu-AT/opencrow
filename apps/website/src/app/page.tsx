@@ -36,7 +36,7 @@ export default function Home() {
               Docs
             </Link>
             <Link
-              href="http://localhost:3000"
+              href="https://github.com/himasnhu-at/opencrow"
               className="bg-black text-white dark:bg-white dark:text-black px-4 py-1.5 rounded-full text-xs hover:scale-105 transition-transform"
             >
               Get Started
@@ -50,7 +50,7 @@ export default function Home() {
         <section className="max-w-7xl mx-auto px-6 text-center flex flex-col items-center">
           <div className="animate-fade-in-up">
             <span className="inline-block py-1 px-3 rounded-full bg-gray-100 dark:bg-white/10 text-xs font-medium text-gray-900 dark:text-white mb-6 border border-gray-200 dark:border-white/10">
-              v1.0 is now available
+              v0.1 under development
             </span>
           </div>
           <h1 className="animate-fade-in-up delay-100 text-5xl md:text-7xl font-bold tracking-tight mb-6 bg-gradient-to-b from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent pb-2">
@@ -64,7 +64,7 @@ export default function Home() {
           </p>
           <div className="animate-fade-in-up delay-300 flex items-center gap-4">
             <Link
-              href="http://localhost:3000"
+              href="https://github.com/himasnhu-at/opencrow"
               className="group bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-medium transition-all flex items-center gap-2 hover:gap-3"
             >
               Start Building
@@ -74,7 +74,7 @@ export default function Home() {
               />
             </Link>
             <Link
-              href="#"
+              href="https://github.com/himasnhu-at/opencrow"
               className="bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white px-8 py-3 rounded-full font-medium transition-colors"
             >
               Learn More
@@ -85,22 +85,12 @@ export default function Home() {
         {/* Video / Demo Section */}
         <section className="max-w-6xl mx-auto px-6 mt-24 mb-32">
           <div className="animate-fade-in-up delay-500 relative rounded-2xl overflow-hidden shadow-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 aspect-video group cursor-pointer">
-            {/* Using the screenshot as a placeholder for the video */}
-            <Image
-              src="/demo-screenshot.png"
-              alt="OpenCrow Functionality Demo"
-              fill
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
+            <video
+              src="/opencrow.mp4"
+              poster="/demo-screenshot.png"
+              controls
+              className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-              <div className="w-20 h-20 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center pl-1">
-                  <div className="w-0 h-0 border-t-[10px] border-t-transparent border-l-[18px] border-l-black border-b-[10px] border-b-transparent ml-1" />
-                </div>
-              </div>
-            </div>
-            {/* Optional: Actual video tag if file existed */}
-            {/* <video src="/demo.mp4" poster="/demo-screenshot.png" controls className="w-full h-full object-cover" /> */}
           </div>
         </section>
 
