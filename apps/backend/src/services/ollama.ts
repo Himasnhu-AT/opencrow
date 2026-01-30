@@ -17,7 +17,7 @@ export class OllamaService implements LLMService {
   constructor(baseUrl: string, model: string) {
     this.baseUrl = baseUrl;
     this.model = model;
-    this.systemPrompt = `You are an AI assistant embedded in a product. 
+    this.systemPrompt = `You are an AI assistant embedded in a product.
 You help users accomplish tasks by calling available API functions.
 Always be helpful, concise, and action-oriented.
 
@@ -36,23 +36,56 @@ If you don't need to call a function, respond normally with text.`;
   ): Promise<LLMChatResult> {
     logger.debug(`Ollama chat request: ${message.substring(0, 100)}...`);
 
+    const supportsTools = await this.checkToolSupport();
+
     // Build messages array from history
-    const messages = this.buildMessages(history, message, tools);
+    const messages = this.buildMessages(
+      history,
+      message,
+      supportsTools ? [] : tools,
+    );
 
     try {
-      const response = await axios.post(`${this.baseUrl}/api/chat`, {
+      const requestBody: any = {
         model: this.model,
         messages,
         stream: false,
         options: {
           temperature: 0.7,
         },
-      });
+      };
+
+      if (supportsTools && tools.length > 0) {
+        requestBody.tools = this.formatToolsForOllama(tools);
+      }
+
+      const response = await axios.post(
+        `${this.baseUrl}/api/chat`,
+        requestBody,
+      );
 
       const content = response.data.message.content;
+      const toolCalls = response.data.message.tool_calls;
+
       logger.debug(`Ollama response: ${content.substring(0, 200)}...`);
 
-      // Try to parse function call from response
+      if (toolCalls && toolCalls.length > 0) {
+        logger.info(`Ollama tool calls detected:`, toolCalls);
+        return {
+          type: "function_call",
+          functionCalls: toolCalls.map((tc: any) => ({
+            name: tc.function.name,
+            args: tc.function.arguments,
+            toolCallId: tc.tool_call_id,
+          })),
+          chat: {
+            history: [...messages, response.data.message],
+            getHistory: async () => [...messages, response.data.message],
+          },
+        };
+      }
+
+      // Try to parse function call from response for older models
       const functionCall = this.parseFunctionCall(content);
 
       if (functionCall) {
@@ -92,21 +125,13 @@ If you don't need to call a function, respond normally with text.`;
       `Ollama continue with ${functionResults.length} function results`,
     );
 
-    // Add function results to history
-    const functionResultsText = functionResults
-      .map(
-        (r) =>
-          `Function ${r.functionResponse.name} returned: ${JSON.stringify(r.functionResponse.response)}`,
-      )
-      .join("\n");
+    const newMessages = functionResults.map((r) => ({
+      role: "tool",
+      content: JSON.stringify(r.functionResponse.response),
+      tool_call_id: r.toolCallId, // Assuming the tool call id is passed in functionResults
+    }));
 
-    const messages = [
-      ...chat.history,
-      {
-        role: "user",
-        content: `Function results:\n${functionResultsText}\n\nPlease provide a helpful response based on these results.`,
-      },
-    ];
+    const messages = [...chat.history, ...newMessages];
 
     try {
       const response = await axios.post(`${this.baseUrl}/api/chat`, {
@@ -215,5 +240,41 @@ If you don't need to call a function, respond normally with text.`;
       );
     }
     return null;
+  }
+
+  private async checkToolSupport(): Promise<boolean> {
+    try {
+      const response = await axios.post(`${this.baseUrl}/api/show`, {
+        name: this.model,
+      });
+      // This is a guess based on how new features are typically added.
+      // We're checking if the model's details include a parameter related to tools.
+      return (
+        response.data.details?.families?.includes("llama3") ||
+        response.data.details?.parameter_size?.startsWith("8B")
+      );
+    } catch (error: any) {
+      logger.warn(
+        `Failed to check tool support for ${this.model}. Assuming no support. Error: ${error.message}`,
+      );
+      return false;
+    }
+  }
+
+  private formatToolsForOllama(tools: Tool[]): any[] {
+    if (!tools || tools.length === 0) return [];
+
+    const declarations = tools.flatMap(
+      (t) => (t as any).functionDeclarations || [],
+    );
+
+    return declarations.map((fn: any) => ({
+      type: "function",
+      function: {
+        name: fn.name,
+        description: fn.description || "No description",
+        parameters: fn.parameters || {},
+      },
+    }));
   }
 }

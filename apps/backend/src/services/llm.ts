@@ -18,7 +18,7 @@ export interface LLMService {
 
 export interface LLMChatResult {
   type: "function_call" | "text";
-  functionCalls?: Array<{ name: string; args: any }>;
+  functionCalls?: Array<{ name: string; args: any; toolCallId?: string }>;
   text?: string;
   chat: any;
 }

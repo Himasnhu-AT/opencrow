@@ -117,6 +117,7 @@ export class ChatService {
         );
 
         functionResults.push({
+          toolCallId: call.toolCallId,
           functionResponse: {
             name: call.name,
             response: execResult,
