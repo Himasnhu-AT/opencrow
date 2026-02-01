@@ -19,7 +19,8 @@ export function AgentSidebar({ agentId }: AgentSidebarProps) {
   const pathname = usePathname();
 
   const items: SidebarItem[] = [
-    { name: "Sandbox", icon: Play, href: `/product/${agentId}` },
+    { name: "Settings", icon: Plug, href: `/product/${agentId}` },
+    { name: "Sandbox", icon: Play, href: `/product/${agentId}/sandbox` },
     {
       name: "Knowledge Base",
       icon: BookOpen,
