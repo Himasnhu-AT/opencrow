@@ -3,8 +3,10 @@ import { getLLMService } from "./llm.js";
 import { OpenAPIParser } from "../utils/openapi-parser.js";
 import { APIProxy } from "../middleware/proxy.js";
 import { Logger } from "../utils/logger.js";
+import { KnowledgeService } from "./knowledge.js";
 
 const logger = new Logger();
+const knowledgeService = new KnowledgeService();
 
 export class ChatService {
   public async processChat(
@@ -52,7 +54,26 @@ export class ChatService {
       parameters: tool.parameters,
     }));
 
-    const tools = [...serverTools, ...formattedClientTools];
+    // Add Knowledge Base tool
+    const knowledgeTool = {
+      name: "queryKnowledgeBase",
+      description:
+        "Query the product knowledge base for context when you need more information to answer the user's question.",
+      parameters: {
+        type: "object",
+        properties: {
+          queries: {
+            type: "array",
+            description:
+              "List of specific queries to search for in the knowledge base.",
+            items: { type: "string" },
+          },
+        },
+        required: ["queries"],
+      },
+    };
+
+    const tools = [...serverTools, ...formattedClientTools, knowledgeTool];
 
     // Save user message
     await prisma.message.create({
@@ -85,14 +106,61 @@ export class ChatService {
     let functionsCalled: Array<{ name: string; args: any; response: any }> = [];
 
     if (result.type === "function_call") {
-      // Execute function calls via proxy
-      // Use server URL from OpenAPI spec (includes /api path) or fall back to product.baseUrl
+      // Execute function calls via proxy or internal handlers
       const apiBaseUrl = spec.servers?.[0]?.url || product.baseUrl;
       const proxy = new APIProxy(apiBaseUrl, spec);
       const functionResults = [];
       const clientToolNames = new Set(clientTools.map((t) => t.name));
 
       for (const call of result.functionCalls!) {
+        // Handle Knowledge Base query
+        if (call.name === "queryKnowledgeBase") {
+          logger.info(
+            `Querying knowledge base with: ${JSON.stringify(call.args)}`,
+          );
+          const queries = call.args.queries || [];
+          let context = "";
+
+          if (Array.isArray(queries) && queries.length > 0) {
+            // Execute all queries in parallel
+            const searchResults = await Promise.all(
+              queries.map((q) => knowledgeService.search(productId, q)),
+            );
+
+            // Deduplicate results based on ID/content?
+            // For now just aggregate.
+            const uniqueResults = new Map();
+            searchResults.flat().forEach((r) => {
+              if (!uniqueResults.has(r.id)) {
+                uniqueResults.set(r.id, r);
+              }
+            });
+
+            context = Array.from(uniqueResults.values())
+              .map((r: any) => `[Source: ${r.metadata.name}]\n${r.text}`)
+              .join("\n\n");
+          }
+
+          const response = {
+            context: context || "No relevant information found.",
+          };
+
+          functionResults.push({
+            toolCallId: call.toolCallId,
+            functionResponse: {
+              name: call.name,
+              response,
+            },
+          });
+
+          functionsCalled.push({
+            name: call.name,
+            args: call.args,
+            response,
+          });
+          continue;
+        }
+
         // Check if this is a client-side tool
         if (clientToolNames.has(call.name)) {
           // For client-side tools, we just pass the call info back to the client
@@ -144,7 +212,10 @@ export class ChatService {
       });
 
       // If we only have client-side tools, we return early so the widget can execute them
-      if (functionsCalled.every((f) => clientToolNames.has(f.name))) {
+      if (
+        functionsCalled.length > 0 &&
+        functionsCalled.every((f) => clientToolNames.has(f.name))
+      ) {
         // Save assistant message with tool calls
         await prisma.message.create({
           data: {

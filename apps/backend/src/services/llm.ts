@@ -14,6 +14,7 @@ export interface LLMService {
     chat: any,
     functionResults: any[],
   ): Promise<LLMTextResult>;
+  getEmbedding(text: string): Promise<number[]>;
 }
 
 export interface LLMChatResult {

@@ -148,8 +148,20 @@ If you don't need to call a function, respond normally with text.`;
         text,
       };
     } catch (error: any) {
-      logger.error(`Ollama continue error: ${error.message}`);
       throw new Error(`Ollama API error: ${error.message}`);
+    }
+  }
+
+  async getEmbedding(text: string): Promise<number[]> {
+    try {
+      const response = await axios.post(`${this.baseUrl}/api/embeddings`, {
+        model: this.model,
+        prompt: text,
+      });
+      return response.data.embedding;
+    } catch (error: any) {
+      console.error("Error generating embedding with Ollama:", error.message);
+      throw error;
     }
   }
 

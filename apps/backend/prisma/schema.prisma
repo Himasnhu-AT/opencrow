@@ -83,6 +83,7 @@ model KnowledgeSource {
   content   String?  // Scraped/parsed content (text)
   status    String   @default("pending") // "pending", "processing", "ready", "error"
   error     String?
+  metadata  Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
