@@ -106,7 +106,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Cart'
-
     post:
       operationId: addToCart
       summary: Add item to cart
@@ -124,6 +123,20 @@ paths:
       responses:
         '200':
           description: Item added to cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+    delete:
+      operationId: clearCart
+      summary: Clear shopping cart
+      responses:
+        '200':
+          description: Cart cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
 
 components:
   schemas:
@@ -177,5 +190,12 @@ components:
           type: array
           items:
             type: object
+            properties:
+              productId:
+                type: string
+              name:
+                type: string
+              quantity:
+                type: integer
         total:
           type: number

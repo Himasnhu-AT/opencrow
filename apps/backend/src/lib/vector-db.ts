@@ -42,13 +42,20 @@ export class LanceDBService implements VectorDB {
 
       const tableNames = await this.db.tableNames();
       if (!tableNames.includes(this.tableName)) {
-        // Create table with schema
-        // Schema is inferred from first data, but we can force it or just ensure we pass correct data
-        // For LanceDB, specific schema definition is better but for simplicity we'll rely on object structure
-        // actually lancedb nodejs might require schema or data to infer.
-        // We'll lazy load table creation on addDocument if needed, or create dummy?
-        // Let's check if we can create empty table.
-        // Node SDK usually allows creating table with data.
+        // Create table with an explicit schema by providing initial data
+        const dummyData = [
+          {
+            id: "dummy-id",
+            vector: Array(3072).fill(0), // Assuming 3072 dimension vectors (llama3.2:3b)
+            text: "dummy text",
+            productId: "dummy-product-id",
+            metadata: JSON.stringify({}),
+            updatedAt: Date.now(),
+          },
+        ];
+        this.table = await this.db.createTable(this.tableName, dummyData);
+        // Immediately delete the dummy record
+        await this.table.delete(`id = 'dummy-id'`);
       } else {
         this.table = await this.db.openTable(this.tableName);
       }
@@ -67,24 +74,24 @@ export class LanceDBService implements VectorDB {
   ): Promise<void> {
     if (!this.db) await this.init();
 
+    const { productId, ...restMetadata } = metadata;
+    logger.debug(
+      `LanceDBService.addDocument: Storing document for productId: ${productId}`,
+    );
+
     const data = [
       {
         id,
         vector,
         text,
-        metadata: JSON.stringify(metadata), // Store metadata as string to avoid schema complexity
+        productId: productId || "unknown",
+        metadata: JSON.stringify(restMetadata), // Store metadata as string to avoid schema complexity
         updatedAt: Date.now(),
       },
     ];
 
     if (!this.table) {
-      const tableNames = await this.db!.tableNames();
-      if (tableNames.includes(this.tableName)) {
-        this.table = await this.db!.openTable(this.tableName);
-      } else {
-        this.table = await this.db!.createTable(this.tableName, data);
-        return;
-      }
+      await this.init(); // Ensure table is initialized if not already
     }
 
     // Overwrite if exists (delete then add, or merge?)
@@ -92,13 +99,13 @@ export class LanceDBService implements VectorDB {
     // specific to lancedb node:
     // "overwrite" mode on createTable replaces the whole table.
     // to update single row, we might need to delete and append.
-    try {
-      await this.table.delete(`id = '${id}'`);
-    } catch (e) {
-      // ignore if not found
-    }
+    // try {
+    //   await this.table!.delete(`id = '${id}'`);
+    // } catch (e) {
+    //   // ignore if not found
+    // }
 
-    await this.table.add(data);
+    await this.table!.add(data);
   }
 
   async search(
@@ -117,6 +124,9 @@ export class LanceDBService implements VectorDB {
     }
 
     const results = await query.toArray();
+    logger.debug(
+      `LanceDBService.search: Raw results from LanceDB: ${JSON.stringify(results)}`,
+    );
 
     return results.map((r: any) => ({
       id: r.id,

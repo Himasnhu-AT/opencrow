@@ -75,7 +75,7 @@ export const createProductSchema = z.object({
 
 export const updateProductSchema = z.object({
   params: z.object({
-    productId: z.string().uuid("Invalid Product ID format"),
+    productId: z.string(),
   }),
   body: z.object({
     name: z.string().min(1).optional(),

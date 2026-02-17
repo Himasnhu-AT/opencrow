@@ -11,10 +11,14 @@ async function main() {
   // Mock data
   const id = "test-doc-1";
   const text = "This is a test document about artificial intelligence.";
-  const metadata = { source: "test", category: "AI" };
-  const vector = Array(768)
+  const metadata = {
+    source: "test",
+    category: "AI",
+    productId: "test-product",
+  };
+  const vector = Array(3072)
     .fill(0)
-    .map(() => Math.random()); // Mock 768-dim vector
+    .map(() => Math.random()); // Mock 3072-dim vector
 
   try {
     // Test Add

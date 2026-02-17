@@ -96,6 +96,9 @@ export class ChatService {
 
     // Send message to LLM
     logger.debug(`Sending message to LLM with ${tools.length} tools`);
+    logger.debug(
+      `Tools available: ${tools.map((t: any) => t.name).join(", ")}`,
+    );
     const result = await llm.chat(
       message,
       [{ functionDeclarations: tools }],

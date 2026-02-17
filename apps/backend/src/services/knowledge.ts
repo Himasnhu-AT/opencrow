@@ -55,7 +55,7 @@ export class KnowledgeService {
         type: "file",
         name: filename,
         content,
-        status: "ready",
+        status: "processing",
         metadata: JSON.stringify(metadata), // Store in Prisma
       },
     });
@@ -65,6 +65,7 @@ export class KnowledgeService {
       const llm = getLLMService();
       const vector = await llm.getEmbedding(content);
 
+      logger.debug("got vectors");
       await vectorDB.addDocument(source.id, vector, content, {
         productId,
         sourceId: source.id,
@@ -104,22 +105,14 @@ export class KnowledgeService {
       const llm = getLLMService();
       const vector = await llm.getEmbedding(query);
 
-      // We filter by productId in the metadata
-      // LanceDB supports SQL usage for filtering, but simple string match might be limited in free/node version depending on impl.
-      // Assuming 'where' clause works with metadata fields accessible.
-      // If metadata is stored as string in DB, filtering might be tricky.
-      // For now, let's search and filter in memory if needed, or rely on LanceDB robust filtering if structured.
-      // In my implementation I passed metadata as string JSON. So I can't easily filter by productId via SQL.
-      // Self-correction: I should store productId as a top-level column in LanceDB table to filter efficiently.
-      // But my `LanceDBService.addDocument` fixed schema to `id, vector, text, metadata(string)`.
-      // I'll update it to check filtering.
-      // For now, I'll search and filter results in memory.
+      const filterString = `productId = '${productId}'`;
+      logger.debug(
+        `KnowledgeService.search: Searching for productId: ${productId} with filter: ${filterString}`,
+      );
 
-      const results = await vectorDB.search(vector, limit * 2); // Fetch more to filter
+      const results = await vectorDB.search(vector, limit, filterString);
 
-      return results
-        .filter((r) => r.metadata.productId === productId)
-        .slice(0, limit);
+      return results;
     } catch (error: any) {
       logger.error(`Search failed: ${error.message}`);
       return [];

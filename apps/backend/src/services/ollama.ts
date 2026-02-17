@@ -131,7 +131,15 @@ If you don't need to call a function, respond normally with text.`;
       tool_call_id: r.toolCallId, // Assuming the tool call id is passed in functionResults
     }));
 
-    const messages = [...chat.history, ...newMessages];
+    const messages = [
+      ...chat.history,
+      ...newMessages,
+      {
+        role: "system",
+        content:
+          "Above are the results from the function calls. Use these results to answer the user's question. Respond in natural language, not JSON. Do not repeat the raw data.",
+      },
+    ];
 
     try {
       const response = await axios.post(`${this.baseUrl}/api/chat`, {
@@ -225,33 +233,83 @@ If you don't need to call a function, respond normally with text.`;
   ): { name: string; args: any } | null {
     try {
       // Try to find JSON in the response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      // Match from first header bracket to the end of the string to capture potentially truncated JSON
+      const jsonMatch = content.match(/\{[\s\S]*/);
       if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
+        const jsonStr = jsonMatch[0];
+        const parsed = this.tryParseJson(jsonStr);
+
+        if (!parsed) return null;
+
         logger.debug(`Parsed Ollama JSON:`, parsed);
+
+        let result: { name: string; args: any } | null = null;
 
         // Format 1: {"function_call": {"name": "...", "arguments": {...}}}
         if (parsed.function_call && typeof parsed.function_call === "object") {
-          return {
+          result = {
             name: parsed.function_call.name,
             args: parsed.function_call.arguments || {},
           };
         }
 
         // Format 2: {"function_call": "functionName", "arguments": {...}} or {"name": "...", "arguments": {...}}
-        if (parsed.name || parsed.function_call) {
-          return {
+        else if (parsed.name || parsed.function_call) {
+          result = {
             name: parsed.name || parsed.function_call,
             args: parsed.arguments || {},
           };
         }
+
+        if (result) {
+          // Post-process arguments to handle stringified JSON values
+          // e.g. "queries": "[\"a\", \"b\"]" -> "queries": ["a", "b"]
+          for (const key in result.args) {
+            const value = result.args[key];
+            if (typeof value === "string") {
+              const trimmed = value.trim();
+              if (
+                (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
+                (trimmed.startsWith("{") && trimmed.endsWith("}"))
+              ) {
+                try {
+                  result.args[key] = JSON.parse(value);
+                  logger.debug(
+                    `Parsed stringified argument for ${key}:`,
+                    result.args[key],
+                  );
+                } catch (e) {
+                  // Ignore parsing error, keep as string
+                }
+              }
+            }
+          }
+          return result;
+        }
       }
-    } catch (e) {
+    } catch (e: any) {
       logger.debug(
         `Failed to parse function call from: ${content.substring(0, 200)}`,
       );
     }
     return null;
+  }
+
+  private tryParseJson(str: string): any | null {
+    try {
+      return JSON.parse(str);
+    } catch (e) {
+      // Try appending closing braces (common truncation issue)
+      const repairs = ["}", "}}", "}}}", '"}'];
+      for (const repair of repairs) {
+        try {
+          return JSON.parse(str + repair);
+        } catch (e2) {
+          continue;
+        }
+      }
+      return null;
+    }
   }
 
   private async checkToolSupport(): Promise<boolean> {
