@@ -1,8 +1,11 @@
+import { LanceDBService } from "../lib/vector-db.js";
+import { getLLMService } from "./llm.js";
 import prisma from "../lib/prisma.js";
 import axios from "axios";
 import { Logger } from "../utils/logger.js";
 
 const logger = new Logger();
+const vectorDB = new LanceDBService();
 
 export class KnowledgeService {
   /**
@@ -30,7 +33,7 @@ export class KnowledgeService {
     });
 
     // Fetch and scrape the URL content asynchronously
-    this.scrapeUrl(source.id, url).catch((error) => {
+    this.scrapeUrl(source.id, url, productId).catch((error) => {
       logger.error(`Failed to scrape URL ${url}: ${error.message}`);
     });
 
@@ -44,31 +47,82 @@ export class KnowledgeService {
     productId: string,
     filename: string,
     content: string,
+    metadata: Record<string, any> = {},
   ) {
-    return prisma.knowledgeSource.create({
+    const source = await prisma.knowledgeSource.create({
       data: {
         productId,
         type: "file",
         name: filename,
         content,
-        status: "ready",
+        status: "processing",
+        metadata: JSON.stringify(metadata), // Store in Prisma
       },
     });
+
+    try {
+      // Generate embedding and store in Vector DB
+      const llm = getLLMService();
+      const vector = await llm.getEmbedding(content);
+
+      logger.debug("got vectors");
+      await vectorDB.addDocument(source.id, vector, content, {
+        productId,
+        sourceId: source.id,
+        type: "file",
+        name: filename,
+        ...metadata,
+      });
+
+      logger.info(`Added file source ${filename} to vector DB`);
+    } catch (error: any) {
+      logger.error(`Failed to vectorise file ${filename}: ${error.message}`);
+      // Don't fail the whole operation, just log
+      await prisma.knowledgeSource.update({
+        where: { id: source.id },
+        data: { error: "Vectorisation failed: " + error.message },
+      });
+    }
+
+    return source;
   }
 
   /**
    * Remove a knowledge source
    */
   public async removeSource(sourceId: string) {
+    await vectorDB.deleteDocument(sourceId);
     return prisma.knowledgeSource.delete({
       where: { id: sourceId },
     });
   }
 
   /**
+   * Search knowledge base
+   */
+  public async search(productId: string, query: string, limit: number = 3) {
+    try {
+      const llm = getLLMService();
+      const vector = await llm.getEmbedding(query);
+
+      const filterString = `productId = '${productId}'`;
+      logger.debug(
+        `KnowledgeService.search: Searching for productId: ${productId} with filter: ${filterString}`,
+      );
+
+      const results = await vectorDB.search(vector, limit, filterString);
+
+      return results;
+    } catch (error: any) {
+      logger.error(`Search failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
    * Scrape URL content and update the source
    */
-  private async scrapeUrl(sourceId: string, url: string) {
+  private async scrapeUrl(sourceId: string, url: string, productId: string) {
     try {
       logger.info(`Scraping URL: ${url}`);
 
@@ -99,15 +153,30 @@ export class KnowledgeService {
         content = content.substring(0, 100000);
       }
 
+      const metadata = { url, scrapedAt: new Date().toISOString() };
+
       await prisma.knowledgeSource.update({
         where: { id: sourceId },
         data: {
           content,
           status: "ready",
+          metadata: JSON.stringify(metadata),
         },
       });
 
-      logger.info(`Successfully scraped URL: ${url}`);
+      // Generate embedding and store in Vector DB
+      const llm = getLLMService();
+      const vector = await llm.getEmbedding(content);
+
+      await vectorDB.addDocument(sourceId, vector, content, {
+        productId,
+        sourceId,
+        type: "url",
+        name: url,
+        ...metadata,
+      });
+
+      logger.info(`Successfully scraped and vectorised URL: ${url}`);
     } catch (error: any) {
       logger.error(`Failed to scrape URL ${url}: ${error.message}`);
 

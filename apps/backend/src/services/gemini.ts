@@ -57,4 +57,12 @@ export class GeminiService implements LLMService {
       text: result.response.text(),
     };
   }
+
+  async getEmbedding(text: string): Promise<number[]> {
+    const model = this.genAI.getGenerativeModel({
+      model: "text-embedding-004",
+    });
+    const result = await model.embedContent(text);
+    return result.embedding.values;
+  }
 }

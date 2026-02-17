@@ -106,28 +106,32 @@ export function KnowledgeBaseCard({ productId }: KnowledgeBaseCardProps) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const file = files[0];
     setIsAdding(true);
+    const uploadPromises = Array.from(files).map(async (file) => {
+      try {
+        // Read file content
+        const content = await file.text();
+
+        const newSource = await apiFetch<KnowledgeSource>(
+          `/api/products/${productId}/knowledge`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              type: "file",
+              name: file.name,
+              content: content,
+            }),
+          },
+        );
+        setSources((prev) => [newSource, ...prev]);
+      } catch (error) {
+        console.error(`Failed to upload file: ${file.name}`, error);
+        alert(`Failed to upload file: ${file.name}. Please try again.`);
+      }
+    });
 
     try {
-      // Read file content
-      const content = await file.text();
-
-      const newSource = await apiFetch<KnowledgeSource>(
-        `/api/products/${productId}/knowledge`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            type: "file",
-            name: file.name,
-            content: content,
-          }),
-        },
-      );
-      setSources((prev) => [newSource, ...prev]);
-    } catch (error) {
-      console.error("Failed to upload file:", error);
-      alert("Failed to upload file. Please try again.");
+      await Promise.all(uploadPromises);
     } finally {
       setIsAdding(false);
       // Reset input
@@ -244,6 +248,7 @@ export function KnowledgeBaseCard({ productId }: KnowledgeBaseCardProps) {
               onChange={handleFileUpload}
               className="hidden"
               disabled={isAdding}
+              multiple
             />
           </label>
         </div>

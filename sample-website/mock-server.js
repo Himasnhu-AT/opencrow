@@ -25,6 +25,11 @@ const products = [
     { id: 'p3', name: 'Laptop Stand', price: 49.99, category: 'Accessories' }
 ];
 
+let cart = {
+    items: [],
+    total: 0
+};
+
 // Middleware to verify token (optional for demo)
 const authMiddleware = (req, res, next) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
@@ -79,11 +84,33 @@ app.get('/api/products', (req, res) => {
 });
 
 app.get('/api/cart', (req, res) => {
-    res.json({ items: [], total: 0 });
+    res.json(cart);
 });
 
 app.post('/api/cart', (req, res) => {
-    res.json({ message: 'Item added to cart' });
+    const { productId, quantity } = req.body;
+    const product = products.find(p => p.id === productId || p.name.toLowerCase().includes(productId.toLowerCase()));
+
+    if (!product) {
+        return res.status(404).json({ error: 'Product not found' });
+    }
+
+    const existingItem = cart.items.find(item => item.productId === product.id);
+
+    if (existingItem) {
+        existingItem.quantity += quantity;
+    } else {
+        cart.items.push({ productId: product.id, name: product.name, quantity });
+    }
+
+    cart.total += product.price * quantity;
+
+    res.json({ message: 'Item added to cart', cart });
+});
+
+app.delete('/api/cart', (req, res) => {
+    cart = { items: [], total: 0 };
+    res.json({ message: 'Cart cleared', cart });
 });
 
 const PORT = 3002;

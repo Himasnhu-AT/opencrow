@@ -108,7 +108,7 @@ function App() {
 
       {/* OpenCrow Widget */}
       <OpenCrowWidget
-        productId="prod_1769552599897"
+        productId="prod_1771310164218"
         apiUrl="http://localhost:3001"
         agentName="Shopping Assistant"
         tools={{

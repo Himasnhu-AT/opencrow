@@ -74,3 +74,9 @@ On your frontend, pass the actual JavaScript functions to the `OpenCrowWidget`:
   }}
 />
 ```
+
+### queries:
+
+```md
+use tool queryknowledgebase to fetch results related to Show recent orders
+```
