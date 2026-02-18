@@ -20,9 +20,12 @@ let subscription = {
 };
 
 const products = [
-    { id: 'p1', name: 'Wireless Headphones', price: 99.99, category: 'Electronics' },
-    { id: 'p2', name: 'Smart Watch', price: 299.99, category: 'Electronics' },
-    { id: 'p3', name: 'Laptop Stand', price: 49.99, category: 'Accessories' }
+    { id: 'p1', name: 'Wireless Headphones', price: 99.99, category: 'Electronics', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=60' },
+    { id: 'p2', name: 'Smart Watch', price: 299.99, category: 'Electronics', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60' },
+    { id: 'p3', name: 'Laptop Stand', price: 49.99, category: 'Accessories', image: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?w=500&auto=format&fit=crop&q=60' },
+    { id: 'p4', name: 'USB-C Hub', price: 39.99, category: 'Accessories', image: 'https://images.unsplash.com/photo-1625842268584-8f3296236761?w=500&auto=format&fit=crop&q=60' },
+    { id: 'p5', name: 'Mechanical Keyboard', price: 149.99, category: 'Electronics', image: 'https://images.unsplash.com/photo-1602025882379-e01cf08baa51?w=500&auto=format&fit=crop&q=60' },
+    { id: 'p6', name: 'Mouse Pad', price: 19.99, category: 'Accessories', image: 'https://images.unsplash.com/photo-1615526675159-e248c3021d3f?w=500&auto=format&fit=crop&q=60' },
 ];
 
 let cart = {
@@ -45,6 +48,23 @@ const authMiddleware = (req, res, next) => {
 app.get('/api/orders', (req, res) => {
     console.log('[Mock API] GET /api/orders');
     res.json(orders);
+});
+
+app.post('/api/orders', (req, res) => {
+    console.log('[Mock API] POST /api/orders (Checkout)');
+    if (cart.items.length === 0) {
+        return res.status(400).json({ error: 'Cart is empty' });
+    }
+    const newOrder = {
+        id: `ord-${Math.floor(Math.random() * 10000)}`,
+        status: 'pending',
+        total: cart.total,
+        items: [...cart.items],
+        createdAt: new Date().toISOString()
+    };
+    orders.unshift(newOrder);
+    cart = { items: [], total: 0 };
+    res.json(newOrder);
 });
 
 app.get('/api/orders/:orderId', (req, res) => {
@@ -100,10 +120,10 @@ app.post('/api/cart', (req, res) => {
     if (existingItem) {
         existingItem.quantity += quantity;
     } else {
-        cart.items.push({ productId: product.id, name: product.name, quantity });
+        cart.items.push({ productId: product.id, name: product.name, price: product.price, image: product.image, quantity });
     }
 
-    cart.total += product.price * quantity;
+    cart.total = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
     res.json({ message: 'Item added to cart', cart });
 });
