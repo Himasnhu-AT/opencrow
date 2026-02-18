@@ -75,6 +75,19 @@ export class ChatService {
 
     const tools = [...serverTools, ...formattedClientTools, knowledgeTool];
 
+    // Add auth tools if product has authentication configured
+    if (product.authType && product.authType !== "none") {
+      tools.push({
+        name: "request_login",
+        description:
+          "Call this tool if the user needs to authenticate or log in, or if the user is unauthenticated and tries to perform an action that requires authentication.",
+        parameters: {
+          type: "object",
+          properties: {},
+        },
+      });
+    }
+
     // Save user message
     await prisma.message.create({
       data: {

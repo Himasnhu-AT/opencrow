@@ -6,11 +6,12 @@ import OrderList from "./components/OrderList";
 import { Cart } from "./components/Cart";
 import NotFound from "./components/NotFound";
 import { Button } from "./components/ui/button";
-import { ShoppingCart, User } from "lucide-react";
-import { api, CartItem } from "./lib/api";
+import { ShoppingCart, User as UserIcon, LogOut } from "lucide-react";
+import { api, CartItem, User } from "./lib/api";
 
-const UserIcon = User as any;
+const UserIconCmp = UserIcon as any;
 const ShoppingCartIcon = ShoppingCart as any;
+const LogOutIcon = LogOut as any;
 
 type Page = "home" | "orders";
 
@@ -19,21 +20,52 @@ function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartTotal, setCartTotal] = useState(0);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const fetchCart = () => {
-    api.getCart().then((cart) => {
-      setCartItems(cart.items);
-      setCartTotal(cart.total);
-    });
-  };
+  const fetchCart = useCallback(() => {
+    api
+      .getCart()
+      .then((cart) => {
+        setCartItems(cart.items);
+        setCartTotal(cart.total);
+      })
+      .catch(() => {
+        // If cart fetch fails (e.g. 401), we might need to logout,
+        // but the main auth check is in useEffect
+      });
+  }, []);
 
   useEffect(() => {
-    fetchCart();
+    const checkAuth = async () => {
+      const token = api.getToken();
+      if (token) {
+        try {
+          const userData = await api.me();
+          setUser(userData);
+          fetchCart();
+        } catch (err) {
+          console.error("Auth check failed:", err);
+          api.setToken(null);
+          setUser(null);
+        }
+      }
+      setLoading(false);
+    };
+    checkAuth();
 
     const handleCartUpdate = () => fetchCart();
     window.addEventListener("cart-updated", handleCartUpdate);
     return () => window.removeEventListener("cart-updated", handleCartUpdate);
-  }, []);
+  }, [fetchCart]);
+
+  const handleLogout = () => {
+    api.setToken(null);
+    setUser(null);
+    setCartItems([]);
+    setCartTotal(0);
+    setCurrentPage("home");
+  };
 
   const navigateTo = useCallback((page: string) => {
     if (page === "home" || page === "orders") {
@@ -96,6 +128,18 @@ function App() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
+
+  // if (!user) {
+  //   return <AuthPage onLogin={handleLogin} />;
+  // }
+
   return (
     <div className="min-h-screen bg-neutral-50 font-sans text-neutral-900">
       <header className="bg-white border-b px-8 py-4 flex justify-between items-center sticky top-0 z-40 shadow-sm">
@@ -126,10 +170,13 @@ function App() {
             </button>
           </nav>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <UserIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">John Doe</span>
-            </Button>
+            <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full">
+              <UserIconCmp className="h-4 w-4" />
+              <span className="hidden sm:inline font-medium">
+                {user?.firstName || "User"} {user?.lastName || ""}
+              </span>
+            </div>
+
             <Button
               variant="outline"
               size="sm"
@@ -138,6 +185,15 @@ function App() {
             >
               <ShoppingCartIcon className="h-4 w-4" />
               Cart ({cartItems.reduce((acc, item) => acc + item.quantity, 0)})
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              title="Logout"
+            >
+              <LogOutIcon className="h-4 w-4" />
             </Button>
           </div>
         </div>

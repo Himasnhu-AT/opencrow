@@ -354,4 +354,26 @@ router.get("/analytics/:productId", (req, res) =>
   analyticsController.getAnalytics(req, res),
 );
 
+// Widget Config Routes
+
+/**
+ * @swagger
+ * /api/widget-config/{productId}:
+ *   get:
+ *     summary: Get public widget configuration
+ *     tags: [Widget]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Widget configuration
+ */
+router.get("/widget-config/:productId", (req, res) =>
+  productController.getWidgetConfig(req, res),
+);
+
 export default router;

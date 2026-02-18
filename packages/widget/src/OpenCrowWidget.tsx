@@ -27,6 +27,29 @@ export function OpenCrowWidget({
 }: OpenCrowWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [sessionId] = useState(() => Math.random().toString(36).substring(7));
+  const [userToken, setUserToken] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    // Fetch product config to check for auth requirements
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch(`${apiUrl}/api/widget-config/${productId}`);
+        if (res.ok) {
+          const config = await res.json();
+          if (config.authType === "local_storage" && config.authKeyName) {
+            const token = localStorage.getItem(config.authKeyName);
+            if (token) {
+              console.log("Found token in localStorage:", config.authKeyName);
+              setUserToken(token);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch widget config:", e);
+      }
+    };
+    fetchConfig();
+  }, [productId, apiUrl]);
 
   return (
     <div className={`ai-agent-widget ${position}`}>
@@ -64,6 +87,7 @@ export function OpenCrowWidget({
               apiUrl={apiUrl}
               sessionId={sessionId}
               apiKey={apiKey}
+              userToken={userToken}
               onClose={() => setIsOpen(false)}
               tools={tools}
             />

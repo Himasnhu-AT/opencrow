@@ -2,14 +2,15 @@
   "name": "opencrow",
   "version": "0.0.1",
   "private": true,
-  "description": "create mock server on the go from ui or json schema",
+  "description": "smart popup assistant for websites",
   "type": "module",
   "scripts": {
     "prepare": "husky install",
     "build": "turbo run build",
     "test": "turbo run test",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --filter=@opencrow/backend --filter=@opencrow/app --filter=@opencrow/sample-website",
     "dev:onlyapp": "turbo run dev --filter=@opencrow/backend --filter=@opencrow/app",
+    "dev:all": "turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "d": "tsc && node dist/deploy.js"

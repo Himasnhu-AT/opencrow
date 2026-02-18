@@ -152,11 +152,17 @@ export default function ProductSettingsPage({
                     <option value="none">None</option>
                     <option value="bearer">Bearer Token</option>
                     <option value="api_key">API Key</option>
+                    <option value="local_storage">Local Storage</option>
                   </select>
                 </div>
-                {formData.authType === "api_key" && (
+                {(formData.authType === "api_key" ||
+                  formData.authType === "local_storage") && (
                   <div className="space-y-2">
-                    <Label htmlFor="authKeyName">Header Name</Label>
+                    <Label htmlFor="authKeyName">
+                      {formData.authType === "local_storage"
+                        ? "Storage Key"
+                        : "Header Name"}
+                    </Label>
                     <Input
                       id="authKeyName"
                       value={formData.authKeyName}
@@ -166,8 +172,17 @@ export default function ProductSettingsPage({
                           authKeyName: e.target.value,
                         })
                       }
-                      placeholder="X-API-Key"
+                      placeholder={
+                        formData.authType === "local_storage"
+                          ? "e.g. accessToken"
+                          : "X-API-Key"
+                      }
                     />
+                    {formData.authType === "local_storage" && (
+                      <p className="text-xs text-gray-500">
+                        The key name in localStorage to retrieve the token from.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

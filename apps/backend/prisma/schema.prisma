@@ -15,12 +15,13 @@ model Product {
   clientSideTools  Json?             // List of client-side tool definitions
   authType         String?           // "none", "bearer", "api-key", "cookie"
   authKeyName      String?           // e.g., "Authorization", "X-API-Key"
+  loginUrl         String?           // URL to redirect for authentication
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   messages         Message[]
   analytics        AnalyticsEvent[]
-  knowledgeSources KnowledgeSource[]
   endpointConfigs  EndpointConfig[]
+  knowledgeSources KnowledgeSource[]
 }
 
 model Message {

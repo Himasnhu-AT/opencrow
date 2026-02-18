@@ -56,6 +56,7 @@ export class ProductService {
       baseUrl?: string;
       authType?: string | null;
       authKeyName?: string | null;
+      loginUrl?: string | null;
       clientSideTools?: any;
     },
   ) {
@@ -138,5 +139,27 @@ export class ProductService {
         enabled,
       },
     });
+  }
+
+  /**
+   * Get public widget configuration
+   */
+  public async getWidgetConfig(productId: string) {
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: {
+        authType: true,
+        authKeyName: true,
+        loginUrl: true,
+        name: true,
+        // Add other public fields here if needed
+      },
+    });
+
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    return product;
   }
 }
