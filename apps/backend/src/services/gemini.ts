@@ -52,9 +52,22 @@ export class GeminiService implements LLMService {
     // Construct the parts for the function response
     // The structure expected by Gemini for function responses involves 'functionResponse' part
     const result = await chat.sendMessage(functionResults);
+
+    // Check for follow-up function calls
+    const functionCalls = result.response.functionCalls();
+
+    if (functionCalls && functionCalls.length > 0) {
+      return {
+        type: "function_call" as const,
+        functionCalls,
+        chat,
+      };
+    }
+
     return {
       type: "text" as const,
       text: result.response.text(),
+      chat,
     };
   }
 

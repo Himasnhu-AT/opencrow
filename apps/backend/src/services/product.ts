@@ -100,11 +100,11 @@ export class ProductService {
       where: { productId },
     });
 
-    const configMap = new Map(configs.map((c) => [c.operationId, c]));
+    const configMap = new Map(configs.map((c: any) => [c.operationId, c]));
 
     // Merge endpoints with configs
     return endpoints.map((endpoint) => {
-      const config = configMap.get(endpoint.operationId);
+      const config = configMap.get(endpoint.operationId) as any;
       return {
         ...endpoint,
         enabled: config?.enabled ?? true,

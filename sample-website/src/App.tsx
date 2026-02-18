@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { OpenCrowWidget } from "@opencrow/ui";
+import { useNavigate } from "react-router-dom";
 import "@opencrow/ui/styles.css";
 import ProductGrid from "./components/ProductGrid";
 import OrderList from "./components/OrderList";
@@ -16,6 +17,7 @@ const LogOutIcon = LogOut as any;
 type Page = "home" | "orders";
 
 function App() {
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState<Page | "404">("home");
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -65,6 +67,7 @@ function App() {
     setCartItems([]);
     setCartTotal(0);
     setCurrentPage("home");
+    navigate("/");
   };
 
   const navigateTo = useCallback((page: string) => {
@@ -221,27 +224,32 @@ function App() {
         tools={{
           navigate_to_page: ({ page }: { page: string }) => {
             console.log("Navigating to:", page);
-            // Example mapping of loose terms to exact routes
             let targetPage = page.toLowerCase();
-            if (targetPage.includes("home") || targetPage.includes("product"))
-              targetPage = "home";
-            else if (targetPage.includes("order")) targetPage = "orders";
 
-            const success = navigateTo(targetPage);
-
-            if (success) {
-              return { success: true, message: `Navigated to ${targetPage}` };
-            } else {
-              // Throwing an error string as requested so the agent knows it failed
-              throw new Error(
-                `Page '${page}' not found. Available pages: 'home', 'orders'.`,
-              );
+            if (targetPage.includes("home") || targetPage.includes("product")) {
+              setCurrentPage("home");
+              // navigate("/"); // Optional: sync URL
+              return { success: true, message: `Navigated to home` };
+            } else if (targetPage.includes("order")) {
+              setCurrentPage("orders");
+              // navigate("/orders"); // Optional: if we had sub-routes
+              return { success: true, message: `Navigated to orders` };
+            } else if (targetPage.includes("login")) {
+              navigate("/login");
+              return { success: true, message: `Navigated to login` };
             }
+
+            return { success: false, message: `Page '${page}' not found` };
           },
           open_cart: () => {
             console.log("Opening cart");
             setIsCartOpen(true);
             return { success: true, message: "Cart opened" };
+          },
+          request_login: () => {
+            console.log("Login requested by AI");
+            navigate("/login");
+            return { success: true, message: "Login user interface opened" };
           },
         }}
       />

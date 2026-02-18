@@ -1,0 +1,19 @@
+{
+    "0.1.0": {
+        "yanked": true,
+        "releaseDate": "5 feb, 2025",
+        "changes": [
+            "inital release",
+            "basic working"
+        ]
+    },
+    "0.2.0": {
+        "yanked": false,
+        "releaseDate": "18 feb, 2025",
+        "changes": [
+            "Added dynamic auth functinality",
+            "more robust function extraction for SLM's",
+            "REaCT agent"
+        ]
+    }
+}

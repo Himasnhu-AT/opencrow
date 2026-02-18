@@ -112,20 +112,36 @@ export class ChatService {
     logger.debug(
       `Tools available: ${tools.map((t: any) => t.name).join(", ")}`,
     );
-    const result = await llm.chat(
+    // Initial LLM call
+    let result = await llm.chat(
       message,
       [{ functionDeclarations: tools }],
       history,
     );
 
-    let responseText: string;
-    let functionsCalled: Array<{ name: string; args: any; response: any }> = [];
+    let responseText: string = "";
+    let allFunctionsCalled: Array<{
+      name: string;
+      args: any;
+      response: any;
+    }> = [];
 
-    if (result.type === "function_call") {
-      // Execute function calls via proxy or internal handlers
+    // Loop to handle sequential function calls (max depth to prevent infinite loops)
+    let depth = 0;
+    const MAX_DEPTH = 5;
+
+    while (result.type === "function_call" && depth < MAX_DEPTH) {
+      depth++;
+      const functionsCalledInThisTurn: Array<{
+        name: string;
+        args: any;
+        response: any;
+      }> = [];
+      const functionResults = [];
+
+      // Execute all function calls in this turn
       const apiBaseUrl = spec.servers?.[0]?.url || product.baseUrl;
       const proxy = new APIProxy(apiBaseUrl, spec);
-      const functionResults = [];
       const clientToolNames = new Set(clientTools.map((t) => t.name));
 
       for (const call of result.functionCalls!) {
@@ -143,8 +159,7 @@ export class ChatService {
               queries.map((q) => knowledgeService.search(productId, q)),
             );
 
-            // Deduplicate results based on ID/content?
-            // For now just aggregate.
+            // Deduplicate results based on ID
             const uniqueResults = new Map();
             searchResults.flat().forEach((r) => {
               if (!uniqueResults.has(r.id)) {
@@ -169,7 +184,7 @@ export class ChatService {
             },
           });
 
-          functionsCalled.push({
+          functionsCalledInThisTurn.push({
             name: call.name,
             args: call.args,
             response,
@@ -177,120 +192,150 @@ export class ChatService {
           continue;
         }
 
-        // Check if this is a client-side tool
-        if (clientToolNames.has(call.name)) {
-          // For client-side tools, we just pass the call info back to the client
-          // The widget will execute it and (optionally) send results back
+        // Check if this is a client-side tool or the special auth tool
+        if (clientToolNames.has(call.name) || call.name === "request_login") {
           logger.info(`Client-side tool called: ${call.name}`);
-
-          functionsCalled.push({
+          functionsCalledInThisTurn.push({
             name: call.name,
             args: call.args,
-            response: {}, // No response yet, client will execute
+            response: {}, // Client will execute
           });
+          // We can't continue server-side loop if client tool is needed
+          // So we break the loop and return what we have so far
+          // The client will handle its tool and potentially call backend again
+          // TODO: This might need better state management for mixed chains
+        } else {
+          try {
+            const execResult = await proxy.executeFunction(
+              call.name,
+              call.args,
+              userToken,
+            );
 
-          // We don't add to functionResults here because we can't continue the chat immediately
-          // The client needs to intervene
-          continue;
+            functionResults.push({
+              toolCallId: call.toolCallId,
+              functionResponse: {
+                name: call.name,
+                response: execResult,
+              },
+            });
+
+            functionsCalledInThisTurn.push({
+              name: call.name,
+              args: call.args,
+              response: execResult,
+            });
+          } catch (error: any) {
+            // Include error in function result so LLM can react (e.g. 401 -> login)
+            const errorResponse = { error: error.message || "Unknown error" };
+            functionResults.push({
+              toolCallId: call.toolCallId,
+              functionResponse: {
+                name: call.name,
+                response: errorResponse,
+              },
+            });
+            functionsCalledInThisTurn.push({
+              name: call.name,
+              args: call.args,
+              response: errorResponse,
+            });
+          }
         }
-
-        const execResult = await proxy.executeFunction(
-          call.name,
-          call.args,
-          userToken,
-        );
-
-        functionResults.push({
-          toolCallId: call.toolCallId,
-          functionResponse: {
-            name: call.name,
-            response: execResult,
-          },
-        });
-
-        functionsCalled.push({
-          name: call.name,
-          args: call.args,
-          response: execResult,
-        });
       }
 
-      // Track function calls
+      // Add to total tracking
+      allFunctionsCalled = [
+        ...allFunctionsCalled,
+        ...functionsCalledInThisTurn,
+      ];
+
+      // If we have any client-side tools in this turn, we must stop and let client handle them
+      if (functionsCalledInThisTurn.some((f) => clientToolNames.has(f.name))) {
+        break;
+      }
+
+      // If no server-side results to report back, we are done
+      if (functionResults.length === 0) {
+        break;
+      }
+
+      // Continue chat with results
+      logger.debug(
+        `Continuing chat (depth ${depth}) with ${functionResults.length} function results`,
+      );
+
+      // Pass the updated chat object from previous result
+      result = await llm.continueWithFunctionResult(
+        result.chat,
+        functionResults,
+      );
+    }
+
+    if (result.type === "text") {
+      responseText = result.text || "";
+    } else {
+      // If we ended deeply nested or with client tools, we might not have text
+      // If client tools were last, responseText remains empty and handled by frontend
+      if (!responseText && allFunctionsCalled.length === 0) {
+        responseText = "I'm not sure how to proceed.";
+      }
+    }
+
+    // Track all function calls
+    if (allFunctionsCalled.length > 0) {
       await prisma.analyticsEvent.create({
         data: {
           productId,
           eventType: "function_called",
           metadata: {
-            functions: functionsCalled.map((f) => f.name),
+            functions: allFunctionsCalled.map((f) => f.name),
             sessionId,
           },
         },
       });
-
-      // If we only have client-side tools, we return early so the widget can execute them
-      if (
-        functionsCalled.length > 0 &&
-        functionsCalled.every((f) => clientToolNames.has(f.name))
-      ) {
-        // Save assistant message with tool calls
-        await prisma.message.create({
-          data: {
-            productId,
-            sessionId,
-            role: "assistant",
-            content: "", // Empty content as it's a pure tool call
-            functionsCalled: functionsCalled as any,
-            toolCalls: {
-              create: functionsCalled.map((f) => ({
-                name: f.name,
-                args: f.args || {},
-                result: {}, // Empty object instead of null for Prisma Json
-              })),
-            },
-          },
-        });
-
-        return {
-          response: "", // No text response
-          functionsCalled,
-        };
-      }
-
-      // Continue chat with function results (only for server-side tools)
-      if (functionResults.length > 0) {
-        logger.debug(
-          `Continuing chat with ${functionResults.length} function results`,
-        );
-        const finalResult = await llm.continueWithFunctionResult(
-          result.chat,
-          functionResults,
-        );
-
-        responseText = finalResult.text;
-      } else {
-        // Should not happen if logic is correct, but fallback
-        responseText = "Waiting for client action...";
-      }
-
-      // Update session history
-      const newHistory = await result.chat.getHistory();
-      await prisma.session.upsert({
-        where: { sessionId },
-        update: { history: newHistory, productId },
-        create: { sessionId, productId, history: newHistory },
-      });
-    } else {
-      // Text response
-      responseText = result.text || "";
-      const newHistory = await result.chat.getHistory();
-      await prisma.session.upsert({
-        where: { sessionId },
-        update: { history: newHistory, productId },
-        create: { sessionId, productId, history: newHistory },
-      });
     }
 
-    // Save assistant message
+    // Handle special case: Client-side tools ending the chain
+    const clientToolNames = new Set(clientTools.map((t) => t.name));
+    const lastTurnCalls = allFunctionsCalled.slice(-1); // Simplification, ideally track turns
+    const lastWasClientTool = lastTurnCalls.some(
+      (f) => clientToolNames.has(f.name) || f.name === "request_login",
+    );
+
+    if (lastWasClientTool && !responseText) {
+      // Save assistant message with tool calls
+      await prisma.message.create({
+        data: {
+          productId,
+          sessionId,
+          role: "assistant",
+          content: "",
+          functionsCalled: allFunctionsCalled as any,
+          toolCalls: {
+            create: allFunctionsCalled.map((f) => ({
+              name: f.name,
+              args: f.args || {},
+              result: f.response || {},
+            })),
+          },
+        },
+      });
+
+      return {
+        response: "",
+        functionsCalled: allFunctionsCalled,
+      };
+    }
+
+    // Save final response
+    const newHistory = await result.chat.getHistory();
+    await prisma.session.upsert({
+      where: { sessionId },
+      update: { history: newHistory, productId },
+      create: { sessionId, productId, history: newHistory },
+    });
+
     await prisma.message.create({
       data: {
         productId,
@@ -298,9 +343,11 @@ export class ChatService {
         role: "assistant",
         content: responseText,
         functionsCalled:
-          functionsCalled.length > 0 ? (functionsCalled as any) : undefined, // Keep for legacy
+          allFunctionsCalled.length > 0
+            ? (allFunctionsCalled as any)
+            : undefined,
         toolCalls: {
-          create: functionsCalled.map((f) => ({
+          create: allFunctionsCalled.map((f) => ({
             name: f.name,
             args: f.args || {},
             result: f.response || {},
@@ -309,10 +356,10 @@ export class ChatService {
       },
     });
 
-    // Return the response with rich function calls
     return {
       response: responseText,
-      functionsCalled: functionsCalled.length > 0 ? functionsCalled : undefined,
+      functionsCalled:
+        allFunctionsCalled.length > 0 ? allFunctionsCalled : undefined,
     };
   }
 
@@ -335,7 +382,7 @@ export class ChatService {
 
     // Fetch the last message for each session to display as preview
     const sessionsWithDetails = await Promise.all(
-      sessions.map(async (session) => {
+      sessions.map(async (session: any) => {
         const lastMessage = await prisma.message.findFirst({
           where: { sessionId: session.sessionId },
           orderBy: { createdAt: "desc" },
