@@ -21,6 +21,16 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Order'
+    post:
+      operationId: createOrder
+      summary: Create a new order (Checkout)
+      responses:
+        '200':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
 
   /orders/{orderId}:
     get:

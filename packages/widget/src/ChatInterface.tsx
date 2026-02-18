@@ -31,7 +31,8 @@ export default function ChatInterface({
   apiKey,
   onClose,
   tools,
-}: ChatInterfaceProps) {
+  useCookies,
+}: ChatInterfaceProps & { useCookies?: boolean }) {
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "Hi! How can I help you today?" },
   ]);
@@ -67,7 +68,7 @@ export default function ChatInterface({
         headers["Authorization"] = `Bearer ${userToken}`;
       }
 
-      const response = await fetch(`${apiUrl}/api/chat`, {
+      const fetchOptions: RequestInit = {
         method: "POST",
         headers,
         body: JSON.stringify({
@@ -76,7 +77,13 @@ export default function ChatInterface({
           sessionId,
           userToken,
         }),
-      });
+      };
+
+      if (useCookies) {
+        fetchOptions.credentials = "include";
+      }
+
+      const response = await fetch(`${apiUrl}/api/chat`, fetchOptions);
 
       const data = await response.json();
 

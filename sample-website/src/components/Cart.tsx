@@ -6,14 +6,40 @@ import {
   SheetTitle,
 } from "./ui/sheet";
 import { Button } from "./ui/button";
+import { CartItem, api } from "../lib/api";
+import { useState } from "react";
 
 interface CartProps {
   isOpen: boolean;
   onClose: () => void;
-  items?: { name: string; price: number; image?: string }[];
+  items: CartItem[];
+  total?: number;
+  onCreateOrder: () => void;
 }
 
-export function Cart({ isOpen, onClose, items = [] }: CartProps) {
+export function Cart({
+  isOpen,
+  onClose,
+  items = [],
+  total = 0,
+  onCreateOrder,
+}: CartProps) {
+  const [loading, setLoading] = useState(false);
+
+  const handleCheckout = async () => {
+    setLoading(true);
+    try {
+      await api.checkout();
+      alert("Order placed successfully!");
+      onCreateOrder();
+      onClose();
+    } catch (e) {
+      alert("Checkout failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent>
@@ -42,7 +68,9 @@ export function Cart({ isOpen, onClose, items = [] }: CartProps) {
               )}
               <div className="flex-1">
                 <h4 className="font-medium">{item.name}</h4>
-                <p className="text-sm text-neutral-500">${item.price}</p>
+                <p className="text-sm text-neutral-500">
+                  ${item.price} x {item.quantity}
+                </p>
               </div>
               <Button
                 size="sm"
@@ -58,11 +86,15 @@ export function Cart({ isOpen, onClose, items = [] }: CartProps) {
             <div className="pt-4 border-t">
               <div className="flex justify-between font-bold mb-4">
                 <span>Total</span>
-                <span>
-                  ${items.reduce((sum, i) => sum + i.price, 0).toFixed(2)}
-                </span>
+                <span>${total.toFixed(2)}</span>
               </div>
-              <Button className="w-full">Checkout</Button>
+              <Button
+                className="w-full"
+                onClick={handleCheckout}
+                disabled={loading}
+              >
+                {loading ? "Processing..." : "Checkout"}
+              </Button>
             </div>
           )}
         </div>

@@ -13,7 +13,7 @@ export interface LLMService {
   continueWithFunctionResult(
     chat: any,
     functionResults: any[],
-  ): Promise<LLMTextResult>;
+  ): Promise<LLMChatResult>;
   getEmbedding(text: string): Promise<number[]>;
 }
 

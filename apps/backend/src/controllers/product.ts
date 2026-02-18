@@ -52,6 +52,7 @@ export class ProductController {
       baseUrl,
       authType,
       authKeyName,
+      loginUrl,
       clientSideTools,
     } = req.body;
 
@@ -62,6 +63,7 @@ export class ProductController {
         baseUrl,
         authType,
         authKeyName,
+        loginUrl,
         clientSideTools,
       });
       res.json({ success: true, product });
@@ -99,6 +101,19 @@ export class ProductController {
       res.json({ success: true, config });
     } catch (error: any) {
       console.error("Error toggling endpoint:", error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  public async getWidgetConfig(req: Request, res: Response) {
+    try {
+      const config = await productService.getWidgetConfig(req.params.productId);
+      res.json(config);
+    } catch (error: any) {
+      console.error("Error fetching widget config:", error);
+      if (error.message === "Product not found") {
+        return res.status(404).json({ error: error.message });
+      }
       res.status(500).json({ error: error.message });
     }
   }

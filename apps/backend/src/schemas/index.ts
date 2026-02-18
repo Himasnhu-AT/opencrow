@@ -81,7 +81,10 @@ export const updateProductSchema = z.object({
     name: z.string().min(1).optional(),
     openApiUrl: z.string().url().optional(),
     baseUrl: z.string().url().optional(),
-    authType: z.enum(["bearer", "api_key", "none"]).nullable().optional(),
+    authType: z
+      .enum(["bearer", "api_key", "none", "local_storage"])
+      .nullable()
+      .optional(),
     authKeyName: z.string().optional().nullable(),
     clientSideTools: z.array(z.any()).optional(),
   }),

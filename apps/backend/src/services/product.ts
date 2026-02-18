@@ -56,6 +56,7 @@ export class ProductService {
       baseUrl?: string;
       authType?: string | null;
       authKeyName?: string | null;
+      loginUrl?: string | null;
       clientSideTools?: any;
     },
   ) {
@@ -99,11 +100,11 @@ export class ProductService {
       where: { productId },
     });
 
-    const configMap = new Map(configs.map((c) => [c.operationId, c]));
+    const configMap = new Map(configs.map((c: any) => [c.operationId, c]));
 
     // Merge endpoints with configs
     return endpoints.map((endpoint) => {
-      const config = configMap.get(endpoint.operationId);
+      const config = configMap.get(endpoint.operationId) as any;
       return {
         ...endpoint,
         enabled: config?.enabled ?? true,
@@ -138,5 +139,27 @@ export class ProductService {
         enabled,
       },
     });
+  }
+
+  /**
+   * Get public widget configuration
+   */
+  public async getWidgetConfig(productId: string) {
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: {
+        authType: true,
+        authKeyName: true,
+        loginUrl: true,
+        name: true,
+        // Add other public fields here if needed
+      },
+    });
+
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    return product;
   }
 }
