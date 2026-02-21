@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://opencrow.himanshuat.com
+
+# Sitemaps
+Sitemap: https://opencrow.himanshuat.com/sitemap.xml
