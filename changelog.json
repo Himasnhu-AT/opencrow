@@ -9,7 +9,7 @@
     },
     "0.2.0": {
         "yanked": false,
-        "releaseDate": "18 feb, 2025",
+        "releaseDate": "20 feb, 2025",
         "changes": [
             "Added dynamic auth functinality",
             "more robust function extraction for SLM's",

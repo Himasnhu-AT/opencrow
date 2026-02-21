@@ -1,0 +1,12 @@
+.git
+.turbo
+node_modules
+apps/**/node_modules
+packages/**/node_modules
+apps/**/.next
+apps/**/dist
+packages/**/dist
+npm-debug.log
+README.md
+.env*
+!.env.production

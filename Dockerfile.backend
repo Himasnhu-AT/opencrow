@@ -1,0 +1,46 @@
+FROM node:20-alpine AS base
+RUN apk add --no-cache libc6-compat
+RUN npm install -g pnpm turbo
+
+FROM base AS builder
+WORKDIR /app
+COPY . .
+RUN turbo prune @opencrow/backend --docker
+
+FROM base AS installer
+WORKDIR /app
+
+COPY --from=builder /app/out/json/ .
+COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN pnpm install --frozen-lockfile
+
+COPY --from=builder /app/out/full/ .
+
+RUN npx prisma generate --schema=apps/backend/prisma/schema.prisma
+
+RUN pnpm turbo run build --filter=@opencrow/backend...
+
+RUN pnpm deploy --filter=@opencrow/backend --prod /app/prod-backend
+
+WORKDIR /app/prod-backend
+RUN npx prisma generate --schema=prisma/schema.prisma
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nodeuser
+USER nodeuser
+
+ENV NODE_ENV=production
+ENV PORT=3001
+
+COPY --from=installer --chown=nodeuser:nodejs /app/prod-backend/package.json .
+COPY --from=installer --chown=nodeuser:nodejs /app/prod-backend/node_modules ./node_modules
+COPY --from=installer --chown=nodeuser:nodejs /app/prod-backend/dist ./dist
+
+COPY --from=installer --chown=nodeuser:nodejs /app/prod-backend/prisma ./prisma 
+
+EXPOSE 3001
+
+CMD ["node", "dist/server.js"]
