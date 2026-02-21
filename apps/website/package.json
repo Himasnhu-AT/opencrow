@@ -3,6 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "scripts": {
+    "prebuild": "pnpm build:content",
     "postbuild": "next-sitemap",
     "dev": "next dev -p 4000",
     "build": "next build",
